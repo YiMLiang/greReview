@@ -1,45 +1,31 @@
 package main
 
 import (
+	"./common"
+	"./model"
+	"./util"
 	"bufio"
-	"errors"
 	"fmt"
 	"github.com/tealeg/xlsx"
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"reflect"
 	"regexp"
 	"strconv"
 	"time"
 )
 
-type word struct {
-	name    string // 单词
-	explain string // 释义
-	id      int    //唯一索引
-}
-
-type file struct {
-	file_id   int    //文件编号
-	file_name string //文件名称
-}
-
-func (f file) Scan(state fmt.ScanState, verb rune) error {
-	panic("implement me")
-}
-
 func main() {
 	//初始化struct
-	words := word{}
-	files := file{}
+	words := model.Word{}
+	files := model.File{}
 
-	fileArr := make([]file, 0)
+	fileArr := make([]model.File, 0)
 
 	//循环遍历文件夹
-	fileDir := "/Users/liu/Downloads/gre"
+
 	for {
-		dir, e := ioutil.ReadDir(fileDir)
+		dir, e := ioutil.ReadDir(common.FileDir)
 		if e != nil {
 			fmt.Println("open dir failed", e)
 		}
@@ -50,8 +36,8 @@ func main() {
 			}
 			fmt.Println("【", i, "】", f.Name(), "🉐️")
 			//给file 赋值
-			files.file_name = f.Name()
-			files.file_id = i
+			files.File_name = f.Name()
+			files.File_id = i
 			fileArr = append(fileArr, files)
 		}
 
@@ -72,10 +58,10 @@ func main() {
 
 			iArr := make([]int, 0)
 			for _, f := range fileArr {
-				iArr = append(iArr, f.file_id)
+				iArr = append(iArr, f.File_id)
 			}
 
-			b, err := Contain(i, iArr)
+			b, err := util.Contain(i, iArr)
 			if err != nil {
 				fmt.Println("")
 			}
@@ -83,9 +69,9 @@ func main() {
 				fmt.Println("宁选择的单词本不存在，请选择正确的单词本")
 				break
 			}
-			fileName := fileArr[i].file_name
+			fileName := fileArr[i].File_name
 			fmt.Println("宁正在复习", fileName)
-			Review(words, "/Users/liu/Downloads/gre/"+fileName)
+			Review(words, common.FileDir+"/"+fileName)
 		}
 	}
 }
@@ -100,10 +86,12 @@ func ReplaceN(input string) (int, error) {
 	return i, err
 }
 
-func Review(words word, excelFileName string) {
+/**
+背诵主逻辑
+*/
+func Review(words model.Word, excelFileName string) {
 	//初始化集合
-	wordArr := make([]word, 0)
-	//excelFileName := "/Users/abc/Downloads/GRE 1700.xlsx"
+	wordArr := make([]model.Word, 0)
 	//打开文件
 	xlFile, err := xlsx.OpenFile(excelFileName)
 	if err != nil {
@@ -112,16 +100,16 @@ func Review(words word, excelFileName string) {
 	//遍历
 	for _, sheet := range xlFile.Sheets {
 		for i, row := range sheet.Rows {
-
+			//给每个word赋值
 			for i, cell := range row.Cells {
 				text := cell.String()
 				if 0 == i {
-					words.name = text
+					words.Name = text
 				} else if 1 == i {
-					words.explain = text
+					words.Explain = text
 				}
 			}
-			words.id = i
+			words.Id = i
 			//逐个添加到切片中
 			wordArr = append(wordArr, words)
 		}
@@ -137,8 +125,8 @@ func Review(words word, excelFileName string) {
 			return
 		}
 		n, err := ReplaceN(input)
-		if err!=nil {
-			fmt.Println("ReplaceN是 : 类型转换异常",err)
+		if err != nil {
+			fmt.Println("ReplaceN是 : 类型转换异常", err)
 		}
 		fmt.Println("--------------------")
 		fmt.Printf("🦌️ 您现在正在复习单元 [%v],", n)
@@ -177,7 +165,9 @@ func Review(words word, excelFileName string) {
 	}
 }
 
-//设置单词背诵间隔
+/**
+设置单词背诵间隔
+*/
 func SleepTime(err error, inputReader *bufio.Reader) (int, bool) {
 	sleep, err := inputReader.ReadString('\n')
 	if err != nil {
@@ -186,7 +176,7 @@ func SleepTime(err error, inputReader *bufio.Reader) (int, bool) {
 	}
 	i, err := ReplaceN(sleep)
 	if err != nil {
-		fmt.Println("ReplaceN : 类型转换异常",err)
+		fmt.Println("ReplaceN : 类型转换异常", err)
 	}
 	return i, false
 }
@@ -194,7 +184,7 @@ func SleepTime(err error, inputReader *bufio.Reader) (int, bool) {
 /**
   获取随机单词逻辑
 */
-func getRandomWords(sleepTime int, length int, w []word) (newWord []word) {
+func getRandomWords(sleepTime int, length int, w []model.Word) (newWord []model.Word) {
 
 	sub := length
 
@@ -207,17 +197,17 @@ func getRandomWords(sleepTime int, length int, w []word) (newWord []word) {
 		r := rand.New(rand.NewSource(time.Now().Unix()))
 
 		x := r.Intn(sub)
-		wordLen := len(w[x].name)
+		wordLen := len(w[x].Name)
 		space := 0
 		if 20 > wordLen {
 			space = 20 - wordLen
 		}
 
-		fmt.Printf("[%s]", w[x].name)
-		for i:=0;i<space ;i++  {
+		fmt.Printf("[%s]", w[x].Name)
+		for i := 0; i < space; i++ {
 			fmt.Print(" ")
 		}
-		fmt.Printf("[%s]\n\n",w[x].explain)
+		fmt.Printf("[%s]\n\n", w[x].Explain)
 
 		//删除已经背过的单词
 		w = append(w[:x], w[x+1:]...)
@@ -243,25 +233,4 @@ func getRandomWords(sleepTime int, length int, w []word) (newWord []word) {
 	}
 	fmt.Printf("剩余需要复习的单词数量 = 【%v】", length)
 	return w
-}
-
-/**
-golang 通用Contains方法
-支持 slice,array,map
-*/
-func Contain(obj interface{}, target interface{}) (bool, error) {
-	targetValue := reflect.ValueOf(target)
-	switch reflect.TypeOf(target).Kind() {
-	case reflect.Slice, reflect.Array:
-		for i := 0; i < targetValue.Len(); i++ {
-			if targetValue.Index(i).Interface() == obj {
-				return true, nil
-			}
-		}
-	case reflect.Map:
-		if targetValue.MapIndex(reflect.ValueOf(obj)).IsValid() {
-			return true, nil
-		}
-	}
-	return false, errors.New("not in array")
 }
