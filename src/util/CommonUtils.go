@@ -6,7 +6,7 @@ import (
 )
 
 /**
-golang 通用Contains方法
+golang 通用Contains方法 判断是否包含某一个字符或者其他类型参数
 支持 slice,array,map
 */
 func Contain(obj interface{}, target interface{}) (bool, error) {

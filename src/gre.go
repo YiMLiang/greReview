@@ -12,6 +12,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -20,11 +21,10 @@ func main() {
 	words := model.Word{}
 	files := model.File{}
 
-	fileArr := make([]model.File, 0)
-
 	//循环遍历文件夹
-
 	for {
+		//每次都新建数组，避免循环导致的数组大小循环增加
+		fileArr := make([]model.File, 0)
 		dir, e := ioutil.ReadDir(common.FileDir)
 		if e != nil {
 			fmt.Println("open dir failed", e)
@@ -32,15 +32,18 @@ func main() {
 		fmt.Println("📖️小刘😔还要😔继续😔背单词😔!!!😔")
 		for i, f := range dir {
 			if f.IsDir() {
-				fmt.Println("文件夹下文件是目录，请改为.xslx格式")
+				fmt.Println("此文件夹内存在目录,请删除目录，并保证文件都是已.xlsx结尾的excel文件")
 			}
-			fmt.Println("【", i, "】", f.Name(), "🉐️")
+			fmt.Println("[", i, "]", f.Name(), "🉐️")
 			//给file 赋值
-			files.File_name = f.Name()
-			files.File_id = i
+			files.FileName = f.Name()
+			files.FileId = i
 			fileArr = append(fileArr, files)
 		}
+		//打印数组内容
+		fmt.Printf("%v", fileArr)
 
+		//获取键盘输入的数字
 		inputReader := bufio.NewReader(os.Stdin)
 		fmt.Printf("请选择要复习的文件:")
 		input, err := inputReader.ReadString('\n')
@@ -53,24 +56,23 @@ func main() {
 		case input:
 			i, err := ReplaceN(input)
 			if err != nil {
-				fmt.Println("ReplaceN : 类型转换异常", err)
+				fmt.Println("ReplaceN : 类型转换异常,请输入有效的文件序号!", err)
+				break
 			}
 
 			iArr := make([]int, 0)
 			for _, f := range fileArr {
-				iArr = append(iArr, f.File_id)
+				iArr = append(iArr, f.FileId)
 			}
 
-			b, err := util.Contain(i, iArr)
-			if err != nil {
-				fmt.Println("")
-			}
+			b, _ := util.Contain(i, iArr)
 			if !b {
 				fmt.Println("宁选择的单词本不存在，请选择正确的单词本")
 				break
 			}
-			fileName := fileArr[i].File_name
+			fileName := fileArr[i].FileName
 			fmt.Println("宁正在复习", fileName)
+			//复习主方法
 			Review(words, common.FileDir+"/"+fileName)
 		}
 	}
@@ -87,10 +89,12 @@ func ReplaceN(input string) (int, error) {
 }
 
 /**
-背诵主逻辑
+@Description 背诵主逻辑
+@param words:单词对象
+@param excelFileName:excel文件
 */
 func Review(words model.Word, excelFileName string) {
-	//初始化集合
+	//初始化单词数组
 	wordArr := make([]model.Word, 0)
 	//打开文件
 	xlFile, err := xlsx.OpenFile(excelFileName)
@@ -104,11 +108,14 @@ func Review(words model.Word, excelFileName string) {
 			for i, cell := range row.Cells {
 				text := cell.String()
 				if 0 == i {
-					words.Name = text
+					//excel sheet 第一列：单词名称
+					words.Name = strings.Replace(text, " ", "", -1)
 				} else if 1 == i {
+					//excel sheet 第二列：单词释义
 					words.Explain = text
 				}
 			}
+			//每个单词的
 			words.Id = i
 			//逐个添加到切片中
 			wordArr = append(wordArr, words)
@@ -126,22 +133,23 @@ func Review(words model.Word, excelFileName string) {
 		}
 		n, err := ReplaceN(input)
 		if err != nil {
-			fmt.Println("ReplaceN是 : 类型转换异常", err)
+			fmt.Println("ReplaceN : 类型转换异常，请输入有效的单元", err)
+			break
 		}
-		fmt.Println("--------------------")
-		fmt.Printf("🦌️ 您现在正在复习单元 [%v],", n)
-		fmt.Printf("请选择背诵频率, 单位[秒/个]  🦌️")
+		fmt.Println("🀀🀄︎🀁🀂🀃🀅🀆🀇🀈🀉🀊🀋🀌🀍🀎🀏🀐🀑🀒🀓🀔🀕🀖🀗🀘🀙🀚🀛🀜🀝🀞🀟🀠🀡🀢🀣🀤🀥🀦🀧🀨🀩")
+		fmt.Printf("🦌️ 您现在正在复习单元 [%v] 🦌\n", n)
+		fmt.Printf("🦌 请选择背诵频率, 单位[秒/个] 🦌️")
 		//手动设置背诵频率
-		i, done := SleepTime(err, inputReader)
-		if done {
-			return
+		i, err := SleepTime(inputReader)
+		if err != nil {
+			println("设置背诵频率发生异常,请输入[1-99999...]之间的整数 ")
+			break
 		}
-
-		fmt.Printf("🦌️ 宁的背诵频率为，[%v 秒/个]  🦌️\n", i)
-		fmt.Println("--------------------")
+		fmt.Printf("🦌️ 宁的背诵频率为，[%v 秒/个] 🦌️\n", i)
+		fmt.Println("🀀🀄︎🀁🀂🀃🀅🀆🀇🀈🀉🀊🀋🀌🀍🀎🀏🀐🀑🀒🀓🀔🀕🀖🀗🀘🀙🀚🀛🀜🀝🀞🀟🀠🀡🀢🀣🀤🀥🀦🀧🀨🀩")
 
 		length := len(wordArr)
-
+		//设置假的单元数，让用户有一种有很多单元需要学习的错觉，有循序渐进学习的满足感，其实选哪个都是随机选100个🌶🐔
 		switch input {
 		case "1\n":
 			wordArr = getRandomWords(i, length, wordArr)
@@ -158,7 +166,7 @@ func Review(words model.Word, excelFileName string) {
 		}
 		//如果length = 0 背完
 		if 0 == len(wordArr) {
-			fmt.Println("恭喜宁背完了!!")
+			fmt.Println("恭喜宁背完了!!🉑🉑 🀀🀄︎🀁🀂🀃🀅🀆🀇🀈🀉🀊🀋🀌🀍🀎🀏🀐🀑🀒🀓🀔🀕🀖🀗🀘🀙🀚🀛🀜🀝🀞🀟🀠🀡🀢🀣🀤🀥🀦🀧🀨🀩 🉑🉑")
 			break
 		}
 
@@ -168,17 +176,18 @@ func Review(words model.Word, excelFileName string) {
 /**
 设置单词背诵间隔
 */
-func SleepTime(err error, inputReader *bufio.Reader) (int, bool) {
+func SleepTime(inputReader *bufio.Reader) (int, error) {
 	sleep, err := inputReader.ReadString('\n')
 	if err != nil {
 		fmt.Println("There were errors reading, exiting program.")
-		return 0, true
+		return 0, err
 	}
 	i, err := ReplaceN(sleep)
 	if err != nil {
 		fmt.Println("ReplaceN : 类型转换异常", err)
+		return 0, err
 	}
-	return i, false
+	return i, err
 }
 
 /**
@@ -194,13 +203,27 @@ func getRandomWords(sleepTime int, length int, w []model.Word) (newWord []model.
 		res = length
 	}
 	for i := 0; i < res; i++ {
+		//随机因子,基于时间戳，每次都不一样
 		r := rand.New(rand.NewSource(time.Now().Unix()))
 
 		x := r.Intn(sub)
 		wordLen := len(w[x].Name)
+		//仅仅为了前端展示需要，表示单词和释义之间的空格数
 		space := 0
 		if 20 > wordLen {
 			space = 20 - wordLen
+		}
+
+		idLen := len(string(w[x].Id))
+		//仅仅为了前端展示需要，表示序号和单词之间的空格数
+		idSpace := 0
+		if 5 > idLen {
+			idSpace = 5 - idLen
+		}
+
+		fmt.Printf("[%v]", w[x].Id)
+		for i := 0; i < idSpace; i++ {
+			fmt.Printf(" ")
 		}
 
 		fmt.Printf("[%s]", w[x].Name)
