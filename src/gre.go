@@ -27,7 +27,8 @@ func main() {
 		fileArr := make([]model.File, 0)
 		dir, e := ioutil.ReadDir(common.FileDir)
 		if e != nil {
-			fmt.Println("open dir failed", e)
+			fmt.Printf("open dir failed,error = {%s},请检查文件路径是否正确\n", e)
+			return
 		}
 		fmt.Println("📖️小刘😔还要😔继续😔背单词😔!!!😔")
 		for i, f := range dir {
@@ -41,7 +42,7 @@ func main() {
 			fileArr = append(fileArr, files)
 		}
 		//打印数组内容
-		fmt.Printf("%v", fileArr)
+		//fmt.Printf("%v\n", fileArr)
 
 		//获取键盘输入的数字
 		inputReader := bufio.NewReader(os.Stdin)
@@ -79,7 +80,8 @@ func main() {
 }
 
 /**
-去掉 input 中的 \n
+@Description 去掉 input 中的 \n
+@param input:控制台输入的数字 eg:  1\n  2\n
 */
 func ReplaceN(input string) (int, error) {
 	re := regexp.MustCompile("\\n")
@@ -139,12 +141,14 @@ func Review(words model.Word, excelFileName string) {
 		fmt.Println("🀀🀄︎🀁🀂🀃🀅🀆🀇🀈🀉🀊🀋🀌🀍🀎🀏🀐🀑🀒🀓🀔🀕🀖🀗🀘🀙🀚🀛🀜🀝🀞🀟🀠🀡🀢🀣🀤🀥🀦🀧🀨🀩")
 		fmt.Printf("🦌️ 您现在正在复习单元 [%v] 🦌\n", n)
 		fmt.Printf("🦌 请选择背诵频率, 单位[秒/个] 🦌️")
+
 		//手动设置背诵频率
-		i, err := SleepTime(inputReader)
+		i, err := sleepTime(inputReader)
 		if err != nil {
 			println("设置背诵频率发生异常,请输入[1-99999...]之间的整数 ")
 			break
 		}
+
 		fmt.Printf("🦌️ 宁的背诵频率为，[%v 秒/个] 🦌️\n", i)
 		fmt.Println("🀀🀄︎🀁🀂🀃🀅🀆🀇🀈🀉🀊🀋🀌🀍🀎🀏🀐🀑🀒🀓🀔🀕🀖🀗🀘🀙🀚🀛🀜🀝🀞🀟🀠🀡🀢🀣🀤🀥🀦🀧🀨🀩")
 
@@ -176,7 +180,7 @@ func Review(words model.Word, excelFileName string) {
 /**
 设置单词背诵间隔
 */
-func SleepTime(inputReader *bufio.Reader) (int, error) {
+func sleepTime(inputReader *bufio.Reader) (int, error) {
 	sleep, err := inputReader.ReadString('\n')
 	if err != nil {
 		fmt.Println("There were errors reading, exiting program.")
@@ -193,7 +197,7 @@ func SleepTime(inputReader *bufio.Reader) (int, error) {
 /**
   获取随机单词逻辑
 */
-func getRandomWords(sleepTime int, length int, w []model.Word) (newWord []model.Word) {
+func getRandomWords(sleepTime int, length int, w []model.Word) []model.Word {
 
 	sub := length
 
@@ -203,27 +207,37 @@ func getRandomWords(sleepTime int, length int, w []model.Word) (newWord []model.
 		res = length
 	}
 	for i := 0; i < res; i++ {
-		//随机因子,基于时间戳，每次都不一样
+		//随机因子,基于时间戳，每次都不一样 x就是随机的数字
 		r := rand.New(rand.NewSource(time.Now().Unix()))
-
 		x := r.Intn(sub)
-		wordLen := len(w[x].Name)
-		//仅仅为了前端展示需要，表示单词和释义之间的空格数
-		space := 0
-		if 20 > wordLen {
-			space = 20 - wordLen
-		}
 
-		idLen := len(string(w[x].Id))
+		idLen := len(strconv.Itoa(i))
 		//仅仅为了前端展示需要，表示序号和单词之间的空格数
 		idSpace := 0
 		if 5 > idLen {
 			idSpace = 5 - idLen
 		}
+		fmt.Printf("[%v]", i)
+		for i := 0; i < idSpace; i++ {
+			fmt.Printf(" ")
+		}
 
+		/*idLen := len(string(w[x].Id))
+		//仅仅为了前端展示需要，表示序号和单词之间的空格数
+		idSpace := 0
+		if 5 > idLen {
+			idSpace = 5 - idLen
+		}
 		fmt.Printf("[%v]", w[x].Id)
 		for i := 0; i < idSpace; i++ {
 			fmt.Printf(" ")
+		}*/
+
+		wordLen := len(w[x].Name)
+		//仅仅为了前端展示需要，表示单词和释义之间的空格数
+		space := 0
+		if 20 > wordLen {
+			space = 20 - wordLen
 		}
 
 		fmt.Printf("[%s]", w[x].Name)
@@ -232,21 +246,12 @@ func getRandomWords(sleepTime int, length int, w []model.Word) (newWord []model.
 		}
 		fmt.Printf("[%s]\n\n", w[x].Explain)
 
-		//删除已经背过的单词
+		//删除已经背过的单词：删除数组某个元素:a = append(a[:i], a[i+1:]...)
 		w = append(w[:x], w[x+1:]...)
 		//控制长度避免数组越界，因为单词少一个，切片长度需要和单词数量相对应也要少一个
 		sub = sub - 1
 		//背一个单词睡3秒钟,除非手动控制
 		time.Sleep(time.Second * time.Duration(sleepTime))
-		////手动控制输入，输入为回车才可继续执行循环
-		//inputReader := bufio.NewReader(os.Stdin)
-		//input, err := bufio.NewReader(os.Stdin).ReadString('\n')
-		//
-		//if err != nil {
-		//	fmt.Println("There were errors reading, exiting program.")
-		//	return
-		//}
-
 	}
 
 	//背100个，总数就减100个
@@ -255,5 +260,6 @@ func getRandomWords(sleepTime int, length int, w []model.Word) (newWord []model.
 		length = 0
 	}
 	fmt.Printf("剩余需要复习的单词数量 = 【%v】", length)
+	//返回数组中剩余的单词,此时单词数组的个数等于 len(w) - 100 |  length == length - 100
 	return w
 }
